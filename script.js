@@ -11,26 +11,66 @@ let time = 0;
 
 /* ================= MUSIC ================= */
 const bgMusic = document.getElementById("bgMusic");
+const audioToggle = document.getElementById("audioToggle");
+const tapHint = document.getElementById("tapHint");
 
-function tryPlayMusic() {
-  const p = bgMusic.play();
-  if (p && typeof p.catch === "function") {
-    p.catch(() => {});
+function hideTapHint() {
+  if (!tapHint) return;
+  tapHint.classList.add("is-hidden");
+}
+
+function updateAudioUI() {
+  if (!audioToggle) return;
+
+  if (bgMusic.muted) {
+    audioToggle.textContent = "🔇";
+    audioToggle.setAttribute("aria-label", "Unmute audio");
+  } else {
+    audioToggle.textContent = "🔊";
+    audioToggle.setAttribute("aria-label", "Mute audio");
   }
 }
 
-function enableMusicOnFirstInteraction() {
-  const start = () => {
-    tryPlayMusic();
-    window.removeEventListener("pointerdown", start);
-    window.removeEventListener("keydown", start);
-    window.removeEventListener("touchstart", start);
+async function safePlay() {
+  try {
+    await bgMusic.play();
+  } catch (_) {
+    // muted autoplay usually works; if not, interaction will unlock it
+  }
+}
+
+function enableSoundOnFirstInteraction() {
+  const unlock = async () => {
+    try {
+      bgMusic.muted = false;
+      await bgMusic.play();
+      hideTapHint();
+    } catch (_) {
+      // If it fails, user can still tap the toggle
+    }
+    updateAudioUI();
   };
 
-  window.addEventListener("pointerdown", start, { once: true });
-  window.addEventListener("keydown", start, { once: true });
-  window.addEventListener("touchstart", start, { once: true });
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
 }
+
+if (audioToggle) {
+  audioToggle.addEventListener("click", async () => {
+    try {
+      bgMusic.muted = !bgMusic.muted;
+      await bgMusic.play();
+      if (!bgMusic.muted) hideTapHint();
+    } catch (_) {}
+    updateAudioUI();
+  });
+}
+
+// Start immediately (muted autoplay)
+updateAudioUI();
+safePlay();
+enableSoundOnFirstInteraction();
 
 /* ================= CANVAS ================= */
 function resizeCanvas() {
@@ -46,9 +86,6 @@ window.addEventListener("resize", resizeCanvas);
 startCamera();
 
 function startCamera() {
-  tryPlayMusic();
-  enableMusicOnFirstInteraction();
-
   video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
@@ -80,7 +117,7 @@ function draw() {
   if (!running) return;
   time += 0.01;
 
-  /* Webcam with subtle motion */
+  // Mirrored webcam with subtle wave
   const waveX = Math.sin(time * 1.2) * 8;
   const waveY = Math.cos(time * 0.9) * 4;
 
@@ -91,53 +128,38 @@ function draw() {
   ctx.drawImage(video, 0, 0, w, h);
   ctx.restore();
 
-  /* Dark overlay */
+  // Concert-style grading
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(0, 0, w, h);
 
-  /* Blue spotlight */
+  // Blue spotlight (left)
   let g1 = ctx.createRadialGradient(
-    w * 0.25,
-    h * 0.3,
-    0,
-    w * 0.25,
-    h * 0.3,
-    w * 0.7
+    w * 0.25, h * 0.3, 0,
+    w * 0.25, h * 0.3, w * 0.7
   );
   g1.addColorStop(0, "rgba(0,190,255,0.35)");
   g1.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
-  /* Green spotlight */
+  // Green spotlight (right)
   let g2 = ctx.createRadialGradient(
-    w * 0.75,
-    h * 0.4,
-    0,
-    w * 0.75,
-    h * 0.4,
-    w * 0.7
+    w * 0.75, h * 0.4, 0,
+    w * 0.75, h * 0.4, w * 0.7
   );
   g2.addColorStop(0, "rgba(0,255,150,0.32)");
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, w, h);
 
-  /* Vignette */
-  let v = ctx.createRadialGradient(
-    w / 2,
-    h / 2,
-    w * 0.2,
-    w / 2,
-    h / 2,
-    w * 0.9
-  );
+  // Vignette
+  let v = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.9);
   v.addColorStop(0, "rgba(0,0,0,0)");
   v.addColorStop(1, "rgba(0,0,0,0.6)");
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, w, h);
 
-  /* Motion detection */
+  // Motion detect
   const frame = ctx.getImageData(0, 0, w, h);
   if (prevFrame) detectMotion(frame);
   prevFrame = frame;
@@ -156,6 +178,7 @@ function detectMotion(frame) {
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       const i = (y * w + x) * 4;
+
       const diff =
         Math.abs(frame.data[i] - prevFrame.data[i]) +
         Math.abs(frame.data[i + 1] - prevFrame.data[i + 1]) +
@@ -209,15 +232,13 @@ function drawBubbles() {
     const haloRadius = b.r * (4.5 + b.energy * 3);
 
     ctx.beginPath();
-    ctx.fillStyle = `rgba(${b.color.r},${b.color.g},${b.color.b},${0.18 *
-      b.life})`;
+    ctx.fillStyle = `rgba(${b.color.r},${b.color.g},${b.color.b},${0.18 * b.life})`;
     ctx.arc(b.x, b.y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
 
     if (b.accent) {
       ctx.beginPath();
-      ctx.fillStyle = `rgba(${b.accent.r},${b.accent.g},${b.accent.b},${0.12 *
-        b.life})`;
+      ctx.fillStyle = `rgba(${b.accent.r},${b.accent.g},${b.accent.b},${0.12 * b.life})`;
       ctx.arc(b.x, b.y, haloRadius * 1.3, 0, Math.PI * 2);
       ctx.fill();
     }
