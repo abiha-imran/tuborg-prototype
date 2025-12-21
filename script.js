@@ -9,18 +9,46 @@ let prevFrame = null;
 let bubbles = [];
 let time = 0;
 
+/* ================= MUSIC ================= */
+const bgMusic = document.getElementById("bgMusic");
+
+function tryPlayMusic() {
+  const p = bgMusic.play();
+  if (p && typeof p.catch === "function") {
+    p.catch(() => {});
+  }
+}
+
+function enableMusicOnFirstInteraction() {
+  const start = () => {
+    tryPlayMusic();
+    window.removeEventListener("pointerdown", start);
+    window.removeEventListener("keydown", start);
+    window.removeEventListener("touchstart", start);
+  };
+
+  window.addEventListener("pointerdown", start, { once: true });
+  window.addEventListener("keydown", start, { once: true });
+  window.addEventListener("touchstart", start, { once: true });
+}
+
+/* ================= CANVAS ================= */
 function resizeCanvas() {
   w = window.innerWidth;
   h = window.innerHeight;
   canvas.width = w;
   canvas.height = h;
 }
+
 window.addEventListener("resize", resizeCanvas);
 
-// Start immediately (no start screen)
+/* Start immediately */
 startCamera();
 
 function startCamera() {
+  tryPlayMusic();
+  enableMusicOnFirstInteraction();
+
   video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
@@ -36,15 +64,15 @@ function startCamera() {
         draw();
       });
     })
-    .catch((err) => {
-      console.error("Camera error:", err);
-
-      // Optional: show a simple message on canvas if camera fails
+    .catch(() => {
       resizeCanvas();
-      ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = "#ffffff";
       ctx.font = "16px Arial";
-      ctx.fillText("Camera permission blocked. Please allow camera access and refresh.", 20, 40);
+      ctx.fillText(
+        "Camera permission blocked. Please allow camera access and refresh.",
+        20,
+        40
+      );
     });
 }
 
@@ -52,7 +80,7 @@ function draw() {
   if (!running) return;
   time += 0.01;
 
-  // 1) Mirrored webcam with subtle wave
+  /* Webcam with subtle motion */
   const waveX = Math.sin(time * 1.2) * 8;
   const waveY = Math.cos(time * 0.9) * 4;
 
@@ -63,49 +91,64 @@ function draw() {
   ctx.drawImage(video, 0, 0, w, h);
   ctx.restore();
 
-  // 2) Concert-style grading
+  /* Dark overlay */
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(0, 0, w, h);
 
-  // Blue spotlight (left)
+  /* Blue spotlight */
   let g1 = ctx.createRadialGradient(
-    w * 0.25, h * 0.3, 0,
-    w * 0.25, h * 0.3, w * 0.7
+    w * 0.25,
+    h * 0.3,
+    0,
+    w * 0.25,
+    h * 0.3,
+    w * 0.7
   );
-  g1.addColorStop(0, "rgba(0, 190, 255, 0.35)");
-  g1.addColorStop(1, "rgba(0, 0, 0, 0)");
+  g1.addColorStop(0, "rgba(0,190,255,0.35)");
+  g1.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
-  // Green spotlight (right)
+  /* Green spotlight */
   let g2 = ctx.createRadialGradient(
-    w * 0.75, h * 0.4, 0,
-    w * 0.75, h * 0.4, w * 0.7
+    w * 0.75,
+    h * 0.4,
+    0,
+    w * 0.75,
+    h * 0.4,
+    w * 0.7
   );
-  g2.addColorStop(0, "rgba(0, 255, 150, 0.32)");
-  g2.addColorStop(1, "rgba(0, 0, 0, 0)");
+  g2.addColorStop(0, "rgba(0,255,150,0.32)");
+  g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, w, h);
 
-  // Vignette
-  let v = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.9);
+  /* Vignette */
+  let v = ctx.createRadialGradient(
+    w / 2,
+    h / 2,
+    w * 0.2,
+    w / 2,
+    h / 2,
+    w * 0.9
+  );
   v.addColorStop(0, "rgba(0,0,0,0)");
   v.addColorStop(1, "rgba(0,0,0,0.6)");
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, w, h);
 
-  // 3) Motion detect
+  /* Motion detection */
   const frame = ctx.getImageData(0, 0, w, h);
   if (prevFrame) detectMotion(frame);
   prevFrame = frame;
 
-  // 4) Update/draw bursts
   updateBubbles();
   drawBubbles();
 
   requestAnimationFrame(draw);
 }
 
+/* ================= BUBBLES ================= */
 function detectMotion(frame) {
   const step = 26;
   const threshold = 38;
@@ -113,7 +156,6 @@ function detectMotion(frame) {
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       const i = (y * w + x) * 4;
-
       const diff =
         Math.abs(frame.data[i] - prevFrame.data[i]) +
         Math.abs(frame.data[i + 1] - prevFrame.data[i + 1]) +
@@ -128,21 +170,21 @@ function spawnBubble(x, y, diffValue) {
   const energy = Math.min(1, (diffValue - 35) / 120);
 
   const palette = [
-    { r: 0, g: 255, b: 170 }, // neon Tuborg green
-    { r: 0, g: 220, b: 255 }, // cyan
-    { r: 40, g: 190, b: 255 } // blue
+    { r: 0, g: 255, b: 170 },
+    { r: 0, g: 220, b: 255 },
+    { r: 40, g: 190, b: 255 }
   ];
 
-  let accent = null;
-  if (energy > 0.7 && Math.random() < 0.25) {
-    accent = { r: 255, g: 60, b: 200 }; // magenta edge
-  }
+  const accent =
+    energy > 0.7 && Math.random() < 0.25
+      ? { r: 255, g: 60, b: 200 }
+      : null;
 
   const baseCol = palette[Math.floor(Math.random() * palette.length)];
 
   bubbles.push({
-    x: x + (Math.random() - 0.5) * 14,
-    y: y + (Math.random() - 0.5) * 14,
+    x,
+    y,
     r: 1.4 + energy * 6,
     life: 1,
     vy: -0.3 - energy * 0.9,
@@ -157,7 +199,7 @@ function updateBubbles() {
   bubbles.forEach((b) => {
     b.y += b.vy;
     b.x += Math.sin(time + b.drift) * (0.5 + b.energy * 1.2);
-    b.life -= 0.015 + b.energy * 0.02;
+    b.life -= 0.02;
   });
   bubbles = bubbles.filter((b) => b.life > 0);
 }
@@ -166,21 +208,20 @@ function drawBubbles() {
   bubbles.forEach((b) => {
     const haloRadius = b.r * (4.5 + b.energy * 3);
 
-    // outer halo
     ctx.beginPath();
-    ctx.fillStyle = `rgba(${b.color.r},${b.color.g},${b.color.b},${0.18 * b.life})`;
+    ctx.fillStyle = `rgba(${b.color.r},${b.color.g},${b.color.b},${0.18 *
+      b.life})`;
     ctx.arc(b.x, b.y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // accent halo
     if (b.accent) {
       ctx.beginPath();
-      ctx.fillStyle = `rgba(${b.accent.r},${b.accent.g},${b.accent.b},${0.12 * b.life})`;
+      ctx.fillStyle = `rgba(${b.accent.r},${b.accent.g},${b.accent.b},${0.12 *
+        b.life})`;
       ctx.arc(b.x, b.y, haloRadius * 1.3, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // core burst
     ctx.beginPath();
     ctx.fillStyle = `rgba(255,255,255,${0.65 * b.life})`;
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
