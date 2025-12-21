@@ -1,9 +1,5 @@
-// === DOM ELEMENTS ===
 const canvas = document.getElementById("beerCanvas");
 const ctx = canvas.getContext("2d");
-
-const startOverlay = document.getElementById("startOverlay");
-const startBtn = document.getElementById("startExperience");
 
 let video;
 let w, h;
@@ -13,45 +9,21 @@ let prevFrame = null;
 let bubbles = [];
 let time = 0;
 
-// Audio (must be a real file in your repo root: song.mp3)
-const audio = new Audio("song.mp3");
-audio.loop = true;
-audio.preload = "auto";
-audio.volume = 0.75;
-
-// ================== CANVAS ==================
 function resizeCanvas() {
-  // keep your original full-screen behavior
   w = window.innerWidth;
   h = window.innerHeight;
-
-  // set actual pixel size
   canvas.width = w;
   canvas.height = h;
 }
 window.addEventListener("resize", resizeCanvas);
 
-// ================== START EXPERIENCE ==================
-startBtn.addEventListener("click", async () => {
-  // 1) Start audio (allowed because user clicked)
-  try {
-    await audio.play();
-  } catch (e) {
-    // If it fails, it’s usually because the file can’t be found or browser blocked it.
-    console.warn("Audio did not start:", e);
-  }
+// Start immediately (no start screen)
+startCamera();
 
-  // 2) Start camera
-  startOverlay.style.display = "none";
-  startCamera();
-});
-
-// ================== CAMERA ==================
 function startCamera() {
   video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
-  video.muted = true; // helps autoplay on some browsers
 
   navigator.mediaDevices
     .getUserMedia({ video: true })
@@ -67,33 +39,35 @@ function startCamera() {
     .catch((err) => {
       console.error("Camera error:", err);
 
-      // If user blocks camera, show overlay again
-      startOverlay.style.display = "grid";
-      alert("Camera permission is required to run the experience.");
+      // Optional: show a simple message on canvas if camera fails
+      resizeCanvas();
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "16px Arial";
+      ctx.fillText("Camera permission blocked. Please allow camera access and refresh.", 20, 40);
     });
 }
 
-// ================== MAIN LOOP ==================
 function draw() {
   if (!running) return;
   time += 0.01;
 
-  // --- 1. DRAW MIRRORED WEBCAM ---
+  // 1) Mirrored webcam with subtle wave
   const waveX = Math.sin(time * 1.2) * 8;
   const waveY = Math.cos(time * 0.9) * 4;
 
   ctx.save();
   ctx.translate(w / 2, h / 2);
-  ctx.scale(-1, 1); // mirror horizontally
+  ctx.scale(-1, 1);
   ctx.translate(-w / 2 + waveX, -h / 2 + waveY);
   ctx.drawImage(video, 0, 0, w, h);
   ctx.restore();
 
-  // --- 2. CONCERT-STYLE COLOR GRADING ---
+  // 2) Concert-style grading
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(0, 0, w, h);
 
-  // Tuborg blue spotlight (left)
+  // Blue spotlight (left)
   let g1 = ctx.createRadialGradient(
     w * 0.25, h * 0.3, 0,
     w * 0.25, h * 0.3, w * 0.7
@@ -103,7 +77,7 @@ function draw() {
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
-  // Tuborg green spotlight (right)
+  // Green spotlight (right)
   let g2 = ctx.createRadialGradient(
     w * 0.75, h * 0.4, 0,
     w * 0.75, h * 0.4, w * 0.7
@@ -120,19 +94,18 @@ function draw() {
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, w, h);
 
-  // --- 3. MOTION DETECTION ---
+  // 3) Motion detect
   const frame = ctx.getImageData(0, 0, w, h);
   if (prevFrame) detectMotion(frame);
   prevFrame = frame;
 
-  // --- 4. UPDATE + DRAW BURSTS ---
+  // 4) Update/draw bursts
   updateBubbles();
   drawBubbles();
 
   requestAnimationFrame(draw);
 }
 
-// ================== MOTION → LIGHT BURSTS ==================
 function detectMotion(frame) {
   const step = 26;
   const threshold = 38;
@@ -140,6 +113,7 @@ function detectMotion(frame) {
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
       const i = (y * w + x) * 4;
+
       const diff =
         Math.abs(frame.data[i] - prevFrame.data[i]) +
         Math.abs(frame.data[i + 1] - prevFrame.data[i + 1]) +
@@ -150,19 +124,18 @@ function detectMotion(frame) {
   }
 }
 
-// ================== CREATE BURST ==================
 function spawnBubble(x, y, diffValue) {
   const energy = Math.min(1, (diffValue - 35) / 120);
 
   const palette = [
-    { r: 0, g: 255, b: 170 },
-    { r: 0, g: 220, b: 255 },
-    { r: 40, g: 190, b: 255 }
+    { r: 0, g: 255, b: 170 }, // neon Tuborg green
+    { r: 0, g: 220, b: 255 }, // cyan
+    { r: 40, g: 190, b: 255 } // blue
   ];
 
   let accent = null;
   if (energy > 0.7 && Math.random() < 0.25) {
-    accent = { r: 255, g: 60, b: 200 };
+    accent = { r: 255, g: 60, b: 200 }; // magenta edge
   }
 
   const baseCol = palette[Math.floor(Math.random() * palette.length)];
@@ -180,7 +153,6 @@ function spawnBubble(x, y, diffValue) {
   });
 }
 
-// ================== UPDATE BURSTS ==================
 function updateBubbles() {
   bubbles.forEach((b) => {
     b.y += b.vy;
@@ -190,16 +162,17 @@ function updateBubbles() {
   bubbles = bubbles.filter((b) => b.life > 0);
 }
 
-// ================== DRAW BURSTS ==================
 function drawBubbles() {
   bubbles.forEach((b) => {
     const haloRadius = b.r * (4.5 + b.energy * 3);
 
+    // outer halo
     ctx.beginPath();
     ctx.fillStyle = `rgba(${b.color.r},${b.color.g},${b.color.b},${0.18 * b.life})`;
     ctx.arc(b.x, b.y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
 
+    // accent halo
     if (b.accent) {
       ctx.beginPath();
       ctx.fillStyle = `rgba(${b.accent.r},${b.accent.g},${b.accent.b},${0.12 * b.life})`;
@@ -207,6 +180,7 @@ function drawBubbles() {
       ctx.fill();
     }
 
+    // core burst
     ctx.beginPath();
     ctx.fillStyle = `rgba(255,255,255,${0.65 * b.life})`;
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
