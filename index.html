@@ -3,15 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tuborg Release - Bubbles</title>
+  <title>Tuborg Release – Bubbles</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Back button (bottom-right) -->
-  <a id="backBtn" href="https://tuborg-unbottle-yourself-e2f1a3.webflow.io/" aria-label="Back">
-    &lt;
+  <!-- Minimal back arrow (top-right) -->
+  <a
+    id="backBtn"
+    href="https://tuborg-unbottle-yourself-e2f1a3.webflow.io/"
+    aria-label="Back to landing"
+  >
+    ←
   </a>
+
+  <!-- Tuborg branding badge (bottom-right) -->
+  <img
+    id="tuborgBadge"
+    src="tuborg%20badge.png"
+    alt="Tuborg badge"
+    draggable="false"
+  />
+
+  <!-- Background music -->
+  <audio id="bgMusic" src="tanya.mp3" preload="auto" loop></audio>
 
   <!-- Fullscreen canvas -->
   <canvas id="beerCanvas"></canvas>
