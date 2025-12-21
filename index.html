@@ -25,8 +25,16 @@
     draggable="false"
   />
 
-  <!-- Background music -->
-  <audio id="bgMusic" src="tanya.mp3" preload="auto" loop></audio>
+  <!-- Mute/Unmute toggle (bottom-left) -->
+  <button id="audioToggle" aria-label="Unmute audio" type="button">
+    🔇
+  </button>
+
+  <!-- Tap-to-unmute hint -->
+  <div id="tapHint" aria-hidden="true">Tap to unmute</div>
+
+  <!-- Background music (autoplay muted is allowed; unmute requires interaction) -->
+  <audio id="bgMusic" src="tanya.mp3" preload="auto" autoplay loop muted></audio>
 
   <!-- Fullscreen canvas -->
   <canvas id="beerCanvas"></canvas>
@@ -34,3 +42,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
