@@ -52,14 +52,14 @@ body {
   transform: translateX(-3px);
 }
 
-/* Tuborg badge (branding size) */
+/* Tuborg badge (slightly bigger) */
 #tuborgBadge {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 9999;
 
-  width: 110px; /* slightly over ~1 inch */
+  width: 130px;
   height: auto;
 
   opacity: 0.95;
@@ -67,13 +67,87 @@ body {
   pointer-events: none;
 }
 
+/* Audio toggle bottom-left */
+#audioToggle {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 9999;
+
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 18px;
+  line-height: 1;
+
+  opacity: 0.92;
+  cursor: pointer;
+  user-select: none;
+}
+
+#audioToggle:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+#audioToggle:active {
+  transform: translateY(0px);
+}
+
+/* Tap-to-unmute hint (above the toggle) */
+#tapHint {
+  position: fixed;
+  left: 24px;
+  bottom: 78px; /* sits above the audio toggle */
+  z-index: 9999;
+
+  padding: 10px 12px;
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  letter-spacing: 0.2px;
+
+  opacity: 0.92;
+  user-select: none;
+  pointer-events: none;
+
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+/* Hidden state */
+#tapHint.is-hidden {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
 /* Small screens */
 @media (max-width: 480px) {
   #tuborgBadge {
-    width: 88px;
+    width: 104px;
   }
 
   #backBtn {
     font-size: 36px;
+  }
+
+  #audioToggle {
+    width: 42px;
+    height: 42px;
+  }
+
+  #tapHint {
+    bottom: 74px;
+    font-size: 12px;
+    padding: 9px 11px;
   }
 }
