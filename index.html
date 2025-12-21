@@ -2,38 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tuborg Release — Bubbles</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Back button (white, Tuborg-y) -->
-  <a id="backBtn" href="https://tuborg-unbottle-yourself-e2f1a3.design.webflow.com/?locale=en&workflow=sitePreview" aria-label="Back">
-    <!-- Simple left-arrow icon (SVG) -->
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M14.5 5.5L8 12l6.5 6.5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Back button (goes to your Webflow landing page) -->
+  <a id="backBtn"
+     href="https://tuborg-unbottle-yourself-e2f1a3.design.webflow.com/?locale=en&workflow=sitePreview"
+     aria-label="Back to landing">
+    <!-- simple back arrow icon -->
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span class="backText">Back</span>
   </a>
 
-  <!-- Small audio toggle -->
-  <button id="audioBtn" type="button" aria-label="Toggle sound">
-    <span id="audioIcon">🔊</span>
-  </button>
-
-  <!-- Tap-to-start overlay (needed for autoplay rules) -->
-  <div id="tapOverlay">
-    <div class="tapCard">
-      <div class="tapTitle">UNBOTTLE YOURSELF</div>
-      <div class="tapSub">Tap / click to start</div>
+  <!-- Start overlay (required for camera+audio to reliably start) -->
+  <div id="startOverlay">
+    <div class="startCard">
+      <div class="startTitle">Unbottle Yourself</div>
+      <div class="startSub">Click to start the experience</div>
+      <button id="startExperience">Enter the experience</button>
+      <div class="startTiny">Camera permission required • Audio will play</div>
     </div>
   </div>
 
   <canvas id="beerCanvas"></canvas>
-
-  <!-- Your local file: song.mp3 in the SAME folder -->
-  <audio id="bgAudio" src="song.mp3" preload="auto" loop></audio>
 
   <script src="script.js"></script>
 </body>
