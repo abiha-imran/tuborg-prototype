@@ -1,11 +1,9 @@
-// ================= BASIC SETUP =================
+// === DOM ELEMENTS ===
 const canvas = document.getElementById("beerCanvas");
-const ctx = canvas.getContext("2d", { alpha: false });
+const ctx = canvas.getContext("2d");
 
-const tapOverlay = document.getElementById("tapOverlay");
-const audioEl = document.getElementById("bgAudio");
-const audioBtn = document.getElementById("audioBtn");
-const audioIcon = document.getElementById("audioIcon");
+const startOverlay = document.getElementById("startOverlay");
+const startBtn = document.getElementById("startExperience");
 
 let video;
 let w, h;
@@ -15,63 +13,48 @@ let prevFrame = null;
 let bubbles = [];
 let time = 0;
 
-let audioEnabled = true;
+// Audio (must be a real file in your repo root: song.mp3)
+const audio = new Audio("song.mp3");
+audio.loop = true;
+audio.preload = "auto";
+audio.volume = 0.75;
 
-// ================= AUDIO UX =================
-function setAudioIcon() {
-  audioIcon.textContent = audioEnabled ? "🔊" : "🔇";
+// ================== CANVAS ==================
+function resizeCanvas() {
+  // keep your original full-screen behavior
+  w = window.innerWidth;
+  h = window.innerHeight;
+
+  // set actual pixel size
+  canvas.width = w;
+  canvas.height = h;
 }
+window.addEventListener("resize", resizeCanvas);
 
-async function tryPlayAudio() {
-  if (!audioEnabled) return;
+// ================== START EXPERIENCE ==================
+startBtn.addEventListener("click", async () => {
+  // 1) Start audio (allowed because user clicked)
   try {
-    await audioEl.play();
+    await audio.play();
   } catch (e) {
-    // Autoplay blocked until user gesture — overlay click should fix it.
+    // If it fails, it’s usually because the file can’t be found or browser blocked it.
+    console.warn("Audio did not start:", e);
   }
-}
 
-audioBtn.addEventListener("click", async () => {
-  audioEnabled = !audioEnabled;
-  setAudioIcon();
-
-  if (!audioEnabled) {
-    audioEl.pause();
-    return;
-  }
-  await tryPlayAudio();
-});
-
-setAudioIcon();
-
-// Tap overlay starts everything (camera + audio)
-tapOverlay.addEventListener("click", async () => {
-  tapOverlay.style.display = "none";
-  await tryPlayAudio();
+  // 2) Start camera
+  startOverlay.style.display = "none";
   startCamera();
 });
 
-// Also allow keyboard (space/enter) to start
-window.addEventListener("keydown", async (e) => {
-  if (tapOverlay.style.display === "none") return;
-  if (e.key === "Enter" || e.key === " ") {
-    tapOverlay.style.display = "none";
-    await tryPlayAudio();
-    startCamera();
-  }
-});
-
-// ================= CAMERA =================
+// ================== CAMERA ==================
 function startCamera() {
-  if (running) return;
-
   video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
-  video.muted = true; // keep webcam silent
+  video.muted = true; // helps autoplay on some browsers
 
   navigator.mediaDevices
-    .getUserMedia({ video: { facingMode: "user" }, audio: false })
+    .getUserMedia({ video: true })
     .then((stream) => {
       video.srcObject = stream;
 
@@ -83,28 +66,19 @@ function startCamera() {
     })
     .catch((err) => {
       console.error("Camera error:", err);
-      // If camera fails, still run a dark background so it doesn't look broken
-      running = true;
-      resizeCanvas();
-      drawFallback();
+
+      // If user blocks camera, show overlay again
+      startOverlay.style.display = "grid";
+      alert("Camera permission is required to run the experience.");
     });
 }
 
-// ================= CANVAS =================
-function resizeCanvas() {
-  w = window.innerWidth;
-  h = window.innerHeight;
-  canvas.width = w;
-  canvas.height = h;
-}
-window.addEventListener("resize", resizeCanvas);
-
-// ================= MAIN LOOP =================
+// ================== MAIN LOOP ==================
 function draw() {
   if (!running) return;
   time += 0.01;
 
-  // --- 1) DRAW MIRRORED WEBCAM ---
+  // --- 1. DRAW MIRRORED WEBCAM ---
   const waveX = Math.sin(time * 1.2) * 8;
   const waveY = Math.cos(time * 0.9) * 4;
 
@@ -115,7 +89,7 @@ function draw() {
   ctx.drawImage(video, 0, 0, w, h);
   ctx.restore();
 
-  // --- 2) CONCERT-STYLE COLOR GRADING ---
+  // --- 2. CONCERT-STYLE COLOR GRADING ---
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(0, 0, w, h);
 
@@ -146,29 +120,22 @@ function draw() {
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, w, h);
 
-  // --- 3) MOTION DETECTION ---
+  // --- 3. MOTION DETECTION ---
   const frame = ctx.getImageData(0, 0, w, h);
   if (prevFrame) detectMotion(frame);
   prevFrame = frame;
 
-  // --- 4) UPDATE + DRAW BURSTS ---
+  // --- 4. UPDATE + DRAW BURSTS ---
   updateBubbles();
   drawBubbles();
 
   requestAnimationFrame(draw);
 }
 
-// If camera fails, still show something (dark + bubbles off)
-function drawFallback() {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, w, h);
-  requestAnimationFrame(drawFallback);
-}
-
-// ================= MOTION → LIGHT BURSTS =================
+// ================== MOTION → LIGHT BURSTS ==================
 function detectMotion(frame) {
-  const step = 26;       // sample grid
-  const threshold = 38;  // lower = more sensitive
+  const step = 26;
+  const threshold = 38;
 
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
@@ -183,19 +150,19 @@ function detectMotion(frame) {
   }
 }
 
-// ================= CREATE BURST =================
+// ================== CREATE BURST ==================
 function spawnBubble(x, y, diffValue) {
   const energy = Math.min(1, (diffValue - 35) / 120);
 
   const palette = [
-    { r: 0, g: 255, b: 170 }, // neon Tuborg green
-    { r: 0, g: 220, b: 255 }, // cyan
-    { r: 40, g: 190, b: 255 } // blue
+    { r: 0, g: 255, b: 170 },
+    { r: 0, g: 220, b: 255 },
+    { r: 40, g: 190, b: 255 }
   ];
 
   let accent = null;
   if (energy > 0.7 && Math.random() < 0.25) {
-    accent = { r: 255, g: 60, b: 200 }; // magenta edge
+    accent = { r: 255, g: 60, b: 200 };
   }
 
   const baseCol = palette[Math.floor(Math.random() * palette.length)];
@@ -213,19 +180,19 @@ function spawnBubble(x, y, diffValue) {
   });
 }
 
-// ================= UPDATE BURSTS =================
+// ================== UPDATE BURSTS ==================
 function updateBubbles() {
-  for (const b of bubbles) {
+  bubbles.forEach((b) => {
     b.y += b.vy;
     b.x += Math.sin(time + b.drift) * (0.5 + b.energy * 1.2);
     b.life -= 0.015 + b.energy * 0.02;
-  }
+  });
   bubbles = bubbles.filter((b) => b.life > 0);
 }
 
-// ================= DRAW BURSTS =================
+// ================== DRAW BURSTS ==================
 function drawBubbles() {
-  for (const b of bubbles) {
+  bubbles.forEach((b) => {
     const haloRadius = b.r * (4.5 + b.energy * 3);
 
     ctx.beginPath();
@@ -244,5 +211,5 @@ function drawBubbles() {
     ctx.fillStyle = `rgba(255,255,255,${0.65 * b.life})`;
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
-  }
+  });
 }
